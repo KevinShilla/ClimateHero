@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from prophet import Prophet
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
 
 st.set_page_config(layout="wide")
 
@@ -47,20 +49,47 @@ def predict_energy_consumption(data, country):
 
     return forecast[['Year', 'Energy_consumption']]
 
+@st.cache_resource
+def predict_co2_emission(data, country):
+    country_data = data[data['Country'] == country]
+
+    # Ensure there is no missing data
+    country_data = country_data.dropna(subset=['Energy_consumption', 'CO2_emission'])
+
+    # Prepare input features (Energy consumption) and target variable (CO2 emission)
+    X = country_data[['Energy_consumption']].values
+    y = country_data['CO2_emission'].values
+
+    # Split data into train and test sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Train Random Forest model
+    rf_model = RandomForestRegressor(random_state=42)
+    rf_model.fit(X_train, y_train)
+
+    # Create future predictions for 2020 to 2030
+    energy_forecast = predict_energy_consumption(data, country)
+    future_energy = energy_forecast['Energy_consumption'].values.reshape(-1, 1)
+
+    # Predict CO2 emissions for future years
+    predicted_co2 = rf_model.predict(future_energy)
+
+    # Prepare forecast data
+    co2_forecast = pd.DataFrame({'Year': energy_forecast['Year'], 'CO2_emission': predicted_co2})
+
+    return co2_forecast
+
 st.sidebar.header("Filters")
-selected_year = st.sidebar.selectbox("Select Year:", sorted(data['Year'].unique()))
 selected_country = st.sidebar.selectbox("Select Country:", sorted(data['Country'].unique()))
 selected_metric = st.sidebar.radio(
     "Select Metric to Display:",
-    ("Energy Consumption", "CO2 Emission")
+    ("Normalized Comparison (Energy & CO2)", "Energy Consumption", "CO2 Emission")
 )
 
 st.sidebar.subheader("Forecast Options")
 forecast_start_year = st.sidebar.slider(
-    "Select Start Year for Forecast:", min_value=2020, max_value=2030, value=2019
+    "Select Start Year for Forecast:", min_value=2020, max_value=2029, value=2020
 )
-
-filtered_data = data[(data['Year'] == selected_year) & (data['Country'] == selected_country)]
 
 st.title("Climate Vision")
 st.write("Kevin Shilla & Sabeha Khan")
@@ -83,7 +112,7 @@ if not country_data.empty:
     ax.set_title(f"Energy Consumption by Type for {selected_country} (1980-2019)", fontsize=14)
     ax.set_xlabel("Year", fontsize=12)
     ax.set_ylabel("Energy Consumption", fontsize=12)
-    ax.legend(title="Energy Types", bbox_to_anchor=(1.05, 1), loc='upper left')  # Place legend outside the graph
+    ax.legend(title="Energy Types", bbox_to_anchor=(1.05, 1), loc='upper left') 
     ax.grid(True, linestyle='--', linewidth=0.5)
 
     st.pyplot(fig)
@@ -91,17 +120,79 @@ if not country_data.empty:
 else:
     st.write(f"No historical data available for {selected_country} from 1980 to 2019.")
 
-st.header("Energy Consumption Prediction")
+st.header("Energy and CO2 Emission Forecasts")
 st.write(f"Forecast for {selected_country} from {forecast_start_year} to 2030:")
 
-forecast_data = predict_energy_consumption(data, selected_country)
+# Predict energy consumption and CO2 emissions
+energy_forecast = predict_energy_consumption(data, selected_country)
+co2_forecast = predict_co2_emission(data, selected_country)
 
-forecast_data = forecast_data[forecast_data['Year'] >= forecast_start_year]
+# Combine predictions into one DataFrame
+combined_forecast = pd.merge(energy_forecast, co2_forecast, on='Year')
 
-fig, ax = plt.subplots(figsize=(10, 6))
-ax.plot(forecast_data['Year'], forecast_data['Energy_consumption'], color='blue', linewidth=2)
-ax.set_title(f"Energy Consumption Forecast for {selected_country} ({forecast_start_year}-2030)", fontsize=14)
-ax.set_xlabel("Year", fontsize=12)
-ax.set_ylabel("Energy Consumption", fontsize=12)
-ax.grid(True, which='both', linestyle='--', linewidth=0.5)
-st.pyplot(fig)
+if selected_metric == "Normalized Comparison (Energy & CO2)":
+    combined_forecast['Energy_norm'] = combined_forecast['Energy_consumption'] / combined_forecast['Energy_consumption'].max()
+    combined_forecast['CO2_norm'] = combined_forecast['CO2_emission'] / combined_forecast['CO2_emission'].max()
+
+    st.subheader(f"Normalized Energy Consumption and CO2 Emissions for {selected_country} (2020-2030)")
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    # Plot normalized Energy Consumption
+    ax.plot(
+        combined_forecast['Year'],
+        combined_forecast['Energy_norm'],
+        label='Energy Consumption (Normalized)',
+        color='blue',
+        linewidth=2,
+    )
+
+    # Plot normalized CO2 Emissions
+    ax.plot(
+        combined_forecast['Year'],
+        combined_forecast['CO2_norm'],
+        label='CO2 Emissions (Normalized)',
+        color='red',
+        linewidth=2,
+    )
+
+    ax.set_title(f"Energy Consumption and CO2 Emissions for {selected_country} (2020-2030)", fontsize=14)
+    ax.set_xlabel("Year", fontsize=12)
+    ax.set_ylabel("Normalized Values", fontsize=12)
+    ax.legend(fontsize=10, loc='upper left')
+    ax.grid(True)
+
+    st.pyplot(fig)
+
+elif selected_metric == "Energy Consumption":
+    st.subheader(f"Energy Consumption Prediction for {selected_country} (2020-2030)")
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(
+        energy_forecast['Year'],
+        energy_forecast['Energy_consumption'],
+        label='Energy Consumption',
+        color='blue',
+        linewidth=2,
+    )
+    ax.set_title(f"Energy Consumption Prediction for {selected_country} (2020-2030)", fontsize=14)
+    ax.set_xlabel("Year", fontsize=12)
+    ax.set_ylabel("Energy Consumption", fontsize=12)
+    ax.legend(fontsize=10, loc='upper left')
+    ax.grid(True)
+    st.pyplot(fig)
+
+elif selected_metric == "CO2 Emission":
+    st.subheader(f"CO2 Emission Prediction for {selected_country} (2020-2030)")
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(
+        co2_forecast['Year'],
+        co2_forecast['CO2_emission'],
+        label='CO2 Emissions',
+        color='red',
+        linewidth=2,
+    )
+    ax.set_title(f"CO2 Emission Prediction for {selected_country} (2020-2030)", fontsize=14)
+    ax.set_xlabel("Year", fontsize=12)
+    ax.set_ylabel("CO2 Emission", fontsize=12)
+    ax.legend(fontsize=10, loc='upper left')
+    ax.grid(True)
+    st.pyplot(fig)
