@@ -1,4 +1,6 @@
 import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
 
 # Set page layout to wide
 st.set_page_config(layout="wide")
@@ -16,53 +18,30 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# Load the data
+@st.cache
+def load_data():
+    data = pd.read_csv('../data/energy.csv')
+    # Ensure correct data types
+    data['Year'] = data['Year'].astype(int)
+    data['Energy Consumption'] = pd.to_numeric(data['Energy Consumption'], errors='coerce')
+    data['CO2 Emission'] = pd.to_numeric(data['CO2 Emission'], errors='coerce')
+    return data
+
+data = load_data()
+
 # Create two columns with ratios 1:2 (left:right)
 col1, col2 = st.columns([1, 2])
 
 with col1:
     st.header("Options")
 
-    # Let the user pick a year from 1980 to 2030
-    year = st.selectbox("Select Year:", list(range(1980, 2031)))
+    # Available years in the data (1980-2019)
+    available_years = sorted(data['Year'].unique())
+    year = st.selectbox("Select Year:", available_years)
 
-    # List of countries to select from
-    country_list = [
-        'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Argentina',
-        'Armenia', 'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain',
-        'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin',
-        'Bhutan', 'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil',
-        'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cambodia', 'Cameroon',
-        'Canada', 'Cape Verde', 'Central African Republic', 'Chad', 'Chile',
-        'China', 'Colombia', 'Comoros', 'Costa Rica', 'Croatia', 'Cuba',
-        'Cyprus', 'Czech Republic', 'Denmark', 'Djibouti', 'Dominica',
-        'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador',
-        'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia',
-        'Fiji', 'Finland', 'France', 'Gabon', 'Gambia', 'Georgia', 'Germany',
-        'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guyana', 'Haiti',
-        'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq',
-        'Ireland', 'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan',
-        'Kazakhstan', 'Kenya', 'Kiribati', 'Kuwait', 'Kyrgyzstan', 'Laos',
-        'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein',
-        'Lithuania', 'Luxembourg', 'Madagascar', 'Malawi', 'Malaysia',
-        'Maldives', 'Mali', 'Malta', 'Mauritania', 'Mauritius', 'Mexico',
-        'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique',
-        'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Zealand',
-        'Nicaragua', 'Niger', 'Nigeria', 'North Korea', 'North Macedonia',
-        'Norway', 'Oman', 'Pakistan', 'Palau', 'Panama', 'Papua New Guinea',
-        'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Qatar',
-        'Romania', 'Russia', 'Rwanda', 'Saint Kitts and Nevis', 'Saint Lucia',
-        'Samoa', 'San Marino', 'Saudi Arabia', 'Senegal', 'Serbia',
-        'Seychelles', 'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia',
-        'Solomon Islands', 'Somalia', 'South Africa', 'South Korea', 'Spain',
-        'Sri Lanka', 'Sudan', 'Suriname', 'Sweden', 'Switzerland', 'Syria',
-        'Taiwan', 'Tajikistan', 'Tanzania', 'Thailand', 'Timor-Leste', 'Togo',
-        'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan',
-        'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom',
-        'United States', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Vatican City',
-        'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe'
-    ]
-
-    # Let the user pick a country from the list
+    # List of countries available in the data
+    country_list = sorted(data['Country'].unique())
     country = st.selectbox("Select Country:", country_list)
 
     # Two green buttons for energy consumption or CO2 emission
@@ -73,10 +52,26 @@ with col1:
 with col2:
     st.header("Graph")
 
-    # Display an empty graph placeholder based on button clicks
-    if energy_button:
-        st.write(f"Energy Consumption Graph for {country} in {year}")
-        st.empty()  # Placeholder for the graph
-    elif co2_button:
-        st.write(f"CO2 Emission Graph for {country} in {year}")
-        st.empty()  # Placeholder for the graph
+    if year > 2019:
+        st.write("Data is not available for years after 2019.")
+    else:
+        selected_data = data[(data['Country'] == country) & (data['Year'] == year)]
+
+        if selected_data.empty:
+            st.write(f"No data available for {country} in {year}.")
+        else:
+            if energy_button:
+                value = selected_data['Energy Consumption'].values[0]
+                st.write(f"Energy Consumption for {country} in {year}: {value}")
+                fig, ax = plt.subplots()
+                ax.bar([country], [value], color='green')
+                ax.set_ylabel('Energy Consumption')
+                st.pyplot(fig)
+            elif co2_button:
+                # Plot CO2 Emission
+                value = selected_data['CO2 Emission'].values[0]
+                st.write(f"CO2 Emission for {country} in {year}: {value}")
+                fig, ax = plt.subplots()
+                ax.bar([country], [value], color='green')
+                ax.set_ylabel('CO2 Emission')
+                st.pyplot(fig)
