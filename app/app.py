@@ -57,7 +57,7 @@ selected_metric = st.sidebar.radio(
 
 st.sidebar.subheader("Forecast Options")
 forecast_start_year = st.sidebar.slider(
-    "Select Start Year for Forecast:", min_value=2019, max_value=2029, value=2019
+    "Select Start Year for Forecast:", min_value=2020, max_value=2030, value=2019
 )
 
 filtered_data = data[(data['Year'] == selected_year) & (data['Country'] == selected_country)]
