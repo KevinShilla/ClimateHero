@@ -86,7 +86,7 @@ selected_metric = st.sidebar.radio(
     ("Normalized Comparison (Energy & CO2)", "Energy Consumption", "CO2 Emission")
 )
 
-st.title("Climate Vision")
+st.title("Climate Hero")
 st.write("Kevin Shilla & Sabeha Khan")
 st.write("Our project analyzes historical energy consumption data and predicts future energy usage trends for different countries. It provides users with interactive visualizations, including energy consumption by type and forecasts up to 2030, helping to better understand global energy trends and make informed decisions.")
 
