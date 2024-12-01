@@ -86,11 +86,6 @@ selected_metric = st.sidebar.radio(
     ("Normalized Comparison (Energy & CO2)", "Energy Consumption", "CO2 Emission")
 )
 
-st.sidebar.subheader("Forecast Options")
-forecast_start_year = st.sidebar.slider(
-    "Select Start Year for Forecast:", min_value=2020, max_value=2029, value=2020
-)
-
 st.title("Climate Vision")
 st.write("Kevin Shilla & Sabeha Khan")
 st.write("Our project analyzes historical energy consumption data and predicts future energy usage trends for different countries. It provides users with interactive visualizations, including energy consumption by type and forecasts up to 2030, helping to better understand global energy trends and make informed decisions.")
@@ -112,7 +107,7 @@ if not country_data.empty:
     ax.set_title(f"Energy Consumption by Type for {selected_country} (1980-2019)", fontsize=14)
     ax.set_xlabel("Year", fontsize=12)
     ax.set_ylabel("Energy Consumption", fontsize=12)
-    ax.legend(title="Energy Types", bbox_to_anchor=(1.05, 1), loc='upper left') 
+    ax.legend(title="Energy Types", bbox_to_anchor=(1.05, 1), loc='upper left')  # Place legend outside the graph
     ax.grid(True, linestyle='--', linewidth=0.5)
 
     st.pyplot(fig)
@@ -120,8 +115,9 @@ if not country_data.empty:
 else:
     st.write(f"No historical data available for {selected_country} from 1980 to 2019.")
 
+# Add prediction section
 st.header("Energy and CO2 Emission Forecasts")
-st.write(f"Forecast for {selected_country} from {forecast_start_year} to 2030:")
+st.write(f"Forecast for {selected_country} from 2020 to 2030:")
 
 # Predict energy consumption and CO2 emissions
 energy_forecast = predict_energy_consumption(data, selected_country)
@@ -131,9 +127,11 @@ co2_forecast = predict_co2_emission(data, selected_country)
 combined_forecast = pd.merge(energy_forecast, co2_forecast, on='Year')
 
 if selected_metric == "Normalized Comparison (Energy & CO2)":
+    # Normalize values for better comparison
     combined_forecast['Energy_norm'] = combined_forecast['Energy_consumption'] / combined_forecast['Energy_consumption'].max()
     combined_forecast['CO2_norm'] = combined_forecast['CO2_emission'] / combined_forecast['CO2_emission'].max()
 
+    # Plot the normalized graph
     st.subheader(f"Normalized Energy Consumption and CO2 Emissions for {selected_country} (2020-2030)")
     fig, ax = plt.subplots(figsize=(12, 6))
 
@@ -155,12 +153,14 @@ if selected_metric == "Normalized Comparison (Energy & CO2)":
         linewidth=2,
     )
 
+    # Add titles, labels, and legend
     ax.set_title(f"Energy Consumption and CO2 Emissions for {selected_country} (2020-2030)", fontsize=14)
     ax.set_xlabel("Year", fontsize=12)
     ax.set_ylabel("Normalized Values", fontsize=12)
     ax.legend(fontsize=10, loc='upper left')
     ax.grid(True)
 
+    # Render the plot in Streamlit
     st.pyplot(fig)
 
 elif selected_metric == "Energy Consumption":
