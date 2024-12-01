@@ -53,7 +53,7 @@ def predict_energy_consumption(data, country):
 def predict_co2_emission(data, country):
     country_data = data[data['Country'] == country]
 
-    # Ensure there is no missing data
+    # I did this just to make sure there is no missing data
     country_data = country_data.dropna(subset=['Energy_consumption', 'CO2_emission'])
 
     # Prepare input features (Energy consumption) and target variable (CO2 emission)
