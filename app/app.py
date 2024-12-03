@@ -29,6 +29,102 @@ def load_data():
 
 data = load_data()
 
+def filter_renewables(data, country):
+    renewables = data[(data['Country'] == country) & (data['Energy_type'] == 'renewables_n_other')]
+    return renewables[['Year', 'Energy_consumption', 'Energy_production']]
+
+
+
+#working:
+def calculate_global_rankings(data):
+    # Prepare forecasted data
+    forecasted_data = pd.DataFrame()
+
+    # Loop through each country
+    for country in data['Country'].unique():
+        renewable_forecast = forecast_renewables(data, country)
+        energy_forecast = predict_energy_consumption(data, country)
+        co2_forecast = predict_co2_emission(data, country)
+
+        if renewable_forecast.empty or energy_forecast.empty or co2_forecast.empty:
+            continue
+
+        # Combine forecasts into a single DataFrame
+        combined_forecast = renewable_forecast.merge(energy_forecast, on='Year').merge(co2_forecast, on='Year')
+        combined_forecast['Country'] = country
+        forecasted_data = pd.concat([forecasted_data, combined_forecast], ignore_index=True)
+
+    # Calculate rankings
+    forecasted_data['Renewable_rank'] = forecasted_data.groupby('Year')['Forecasted_consumption'].rank(ascending=False)
+    forecasted_data['CO2_rank'] = forecasted_data.groupby('Year')['CO2_emission'].rank(ascending=True)
+    forecasted_data['Consumption_rank'] = forecasted_data.groupby('Year')['Energy_consumption'].rank(ascending=True)
+
+    # Calculate Climate Hero Points
+    forecasted_data['Climate_points'] = (
+        forecasted_data['Renewable_rank'] +
+        forecasted_data['CO2_rank'] +
+        forecasted_data['Consumption_rank']
+    )
+
+    # Average points by country
+    rankings = forecasted_data.groupby('Country', as_index=False).agg({
+        'Climate_points': 'mean',
+        'Renewable_rank': 'mean',
+        'CO2_rank': 'mean',
+        'Consumption_rank': 'mean',  # Ensuring this column is included
+    })
+    rankings = rankings.sort_values(by='Climate_points', ascending=True)
+
+    return rankings
+
+
+def is_climate_hero(rankings, selected_country):
+    # Get the row for the selected country
+    row = rankings[rankings['Country'] == selected_country]
+
+    if row.empty:
+        return False
+
+    # Check if the ranks are in the top 5
+    return (
+        row.iloc[0]['Consumption_rank'] <= 5 and
+        row.iloc[0]['Renewable_rank'] <= 5
+    )
+
+   
+   
+
+def top_climate_heroes(rankings, top_n=5):
+    return rankings.head(top_n)
+
+def is_climate_hero(rankings, country):
+    top_heroes = top_climate_heroes(rankings)
+    return country in top_heroes['Country'].values
+
+
+
+@st.cache_resource
+def forecast_renewables(data, country):
+    renewables = filter_renewables(data, country)
+    if renewables.empty:
+        return pd.DataFrame()
+
+    # Prepare data for Prophet
+    prophet_data = pd.DataFrame({
+        'ds': pd.to_datetime(renewables['Year'], format='%Y'),
+        'y': renewables['Energy_consumption']
+    })
+    
+    model = Prophet()
+    model.fit(prophet_data)
+    future = model.make_future_dataframe(periods=11, freq='Y')
+    forecast = model.predict(future)
+
+    forecast['Year'] = forecast['ds'].dt.year
+    forecast = forecast[['Year', 'yhat']].rename(columns={'yhat': 'Forecasted_consumption'})
+    return forecast
+
+
 @st.cache_resource
 def predict_energy_consumption(data, country):
     country_data = data[data['Country'] == country]
@@ -196,3 +292,25 @@ elif selected_metric == "CO2 Emission":
     ax.legend(fontsize=10, loc='upper left')
     ax.grid(True)
     st.pyplot(fig)
+
+renewable_data = filter_renewables(data, selected_country)
+
+rankings = calculate_global_rankings(data)
+
+st.subheader("Top 5 Climate Heroes")
+
+df_sorted = rankings.sort_values(by='Climate_points', ascending=True)
+
+# Add a Climate_rank column based on the sorted order
+df_sorted['Climate_rank'] = range(1, len(df_sorted) + 1)
+
+# Reset index if needed
+df_sorted.reset_index(drop=True, inplace=True)
+is_hero = is_climate_hero(df_sorted, selected_country)
+st.header("Climate Hero Rankings")
+if is_hero:
+        st.success(f"{selected_country} is on track to become a Climate Hero by 2030!")
+else:
+    st.warning(f"{selected_country} is not a Climate Hero by 2030.")
+
+st.table(df_sorted.head())
