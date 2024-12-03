@@ -127,5 +127,7 @@ Go to: https://climatehero.streamlit.app/
 Climate Hero is designed to serve a wide audience:
 
 Policy Makers: Use predictions to implement data-driven sustainability initiatives.
+
 Researchers: Analyze trends in energy consumption and CO2 emissions for environmental studies.
+
 Individuals: Gain insights into energy and CO2 trends to make informed lifestyle choices.
