@@ -131,3 +131,5 @@ Policy Makers: Use predictions to implement data-driven sustainability initiativ
 Researchers: Analyze trends in energy consumption and CO2 emissions for environmental studies.
 
 Individuals: Gain insights into energy and CO2 trends to make informed lifestyle choices.
+
+**Made by Kevin Shilla and Sabeha Khan**
