@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from prophet import Prophet
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
+import pickle
+
 
 st.set_page_config(layout="wide")
 
@@ -28,6 +30,14 @@ def load_data():
     return data
 
 data = load_data()
+
+with open("data/country_flag_emoji.pkl", "rb") as f:
+    country_flag_emoji = pickle.load(f)
+country_flag_emoji["Bolivia"] = ":flag-bo:"
+country_flag_emoji["British Virgin Islands"] = ":flag-vg:"
+country_flag_emoji["Brunei"] = ":flag-bn:"
+country_flag_emoji["Burma"] = ":flag-mm:"
+
 
 def filter_renewables(data, country):
     renewables = data[(data['Country'] == country) & (data['Energy_type'] == 'renewables_n_other')]
@@ -177,6 +187,15 @@ def predict_co2_emission(data, country):
 
 st.sidebar.header("Filters")
 selected_country = st.sidebar.selectbox("Select Country:", sorted(data['Country'].unique()))
+# Get the flag for the selected country
+flag = country_flag_emoji.get(selected_country, None)
+if flag:
+    # Display the flag with increased size
+    st.sidebar.markdown(
+        f"<span style='font-size: 250px;'>{flag}</span>",
+        unsafe_allow_html=True
+    )
+
 selected_metric = st.sidebar.radio(
     "Select Metric to Display:",
     ("Normalized Comparison (Energy & CO2)", "Energy Consumption", "CO2 Emission")
