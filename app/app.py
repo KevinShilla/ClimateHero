@@ -33,11 +33,6 @@ data = load_data()
 
 with open("data/country_flag_emoji.pkl", "rb") as f:
     country_flag_emoji = pickle.load(f)
-country_flag_emoji["Bolivia"] = ":flag-bo:"
-country_flag_emoji["British Virgin Islands"] = ":flag-vg:"
-country_flag_emoji["Brunei"] = ":flag-bn:"
-country_flag_emoji["Burma"] = ":flag-mm:"
-
 
 def filter_renewables(data, country):
     renewables = data[(data['Country'] == country) & (data['Energy_type'] == 'renewables_n_other')]
