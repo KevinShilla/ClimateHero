@@ -311,6 +311,7 @@ elif selected_metric == "CO2 Emission":
 renewable_data = filter_renewables(data, selected_country)
 
 rankings_file = 'results/rankings.csv'
+
 # If the file exists, load it
 if os.path.exists(rankings_file):
     rankings = pd.read_csv(rankings_file)
@@ -333,6 +334,7 @@ is_hero = is_climate_hero(df_sorted, selected_country)
 st.header("Climate Hero Rankings")
 if is_hero:
         st.success(f"{selected_country} is on track to become a Climate Hero by 2030!")
+        st.balloons()
 else:
     st.warning(f"{selected_country} is not a Climate Hero by 2030.")
 
