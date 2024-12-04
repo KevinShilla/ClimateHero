@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from prophet import Prophet
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
+import os
 import pickle
 
 
@@ -309,7 +310,15 @@ elif selected_metric == "CO2 Emission":
 
 renewable_data = filter_renewables(data, selected_country)
 
-rankings = calculate_global_rankings(data)
+rankings_file = 'results/rankings.csv'
+# If the file exists, load it
+if os.path.exists(rankings_file):
+    rankings = pd.read_csv(rankings_file)
+else:
+    # Otherwise, calculate the rankings and save them to a file
+    rankings = calculate_global_rankings(data)
+    rankings.to_csv(rankings_file, index=False)
+
 
 st.subheader("Top 5 Climate Heroes")
 
