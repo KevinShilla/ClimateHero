@@ -95,6 +95,9 @@ _
 _![image](https://github.com/user-attachments/assets/1b6e681b-329d-4705-a0cf-718091dcca34)
 _
 
+### Climate Hero Rankings
+![image](https://github.com/user-attachments/assets/e6ad2942-3aef-48ba-b586-b4a8369ef652)
+
 ---
 
 ## ⚙️ **Setup**
