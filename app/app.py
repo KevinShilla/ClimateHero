@@ -6,6 +6,8 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 import os
 import pickle
+import altair as alt
+
 
 
 st.set_page_config(layout="wide")
@@ -130,7 +132,28 @@ def forecast_renewables(data, country):
     forecast = forecast[['Year', 'yhat']].rename(columns={'yhat': 'Forecasted_consumption'})
     return forecast
 
+#population is in million person in the data
+@st.cache_resource
+def predict_population(data, country):
+    country_data = data[data['Country'] == country]
+    prophet_data = pd.DataFrame({
+        'ds': pd.to_datetime(country_data['Year'], format='%Y'),
+        'y': country_data['Population']
+    })
 
+    model = Prophet()
+    model.fit(prophet_data)
+
+    future = model.make_future_dataframe(periods=12, freq='Y')
+    forecast = model.predict(future)
+
+    forecast = forecast[(forecast['ds'].dt.year >= 2020) & (forecast['ds'].dt.year <= 2030)]
+    forecast['Year'] = forecast['ds'].dt.year
+    forecast['Population'] = forecast['yhat']
+
+    return forecast[['Year', 'Population']]
+
+#Energy_consumption - Amount of Consumption for the specific energy source, measured (quad Btu)
 @st.cache_resource
 def predict_energy_consumption(data, country):
     country_data = data[data['Country'] == country]
@@ -142,7 +165,7 @@ def predict_energy_consumption(data, country):
     model = Prophet()
     model.fit(prophet_data)
 
-    future = model.make_future_dataframe(periods=11, freq='Y')
+    future = model.make_future_dataframe(periods=12, freq='Y')
     forecast = model.predict(future)
 
     forecast = forecast[(forecast['ds'].dt.year >= 2020) & (forecast['ds'].dt.year <= 2030)]
@@ -151,6 +174,7 @@ def predict_energy_consumption(data, country):
 
     return forecast[['Year', 'Energy_consumption']]
 
+#CO2_emission - The amount of C02 emitted, measured (MMtonnes CO2) million metric tonnes 
 @st.cache_resource
 def predict_co2_emission(data, country):
     country_data = data[data['Country'] == country]
@@ -203,28 +227,28 @@ st.write("Our project analyzes historical energy consumption data and predicts f
 
 country_data = data[(data['Country'] == selected_country) & (data['Year'] <= 2019)]
 
-if not country_data.empty:
-    st.subheader(f"Historical Data for {selected_country} (1980-2019)")
-    st.dataframe(country_data)
+# if not country_data.empty:
+#     st.subheader(f"Historical Data for {selected_country} (1980-2019)")
+#     st.dataframe(country_data)
 
-    fig, ax = plt.subplots(figsize=(12, 6))
-    energy_types = country_data['Energy_type'].unique()
-    colors = plt.cm.get_cmap('tab10', len(energy_types)).colors
+#     fig, ax = plt.subplots(figsize=(12, 6))
+#     energy_types = country_data['Energy_type'].unique()
+#     colors = plt.cm.get_cmap('tab10', len(energy_types)).colors
 
-    for idx, energy_type in enumerate(energy_types):
-        type_data = country_data[country_data['Energy_type'] == energy_type]
-        ax.scatter(type_data['Year'], type_data['Energy_consumption'], label=energy_type, color=colors[idx])
+#     for idx, energy_type in enumerate(energy_types):
+#         type_data = country_data[country_data['Energy_type'] == energy_type]
+#         ax.scatter(type_data['Year'], type_data['Energy_consumption'], label=energy_type, color=colors[idx])
 
-    ax.set_title(f"Energy Consumption by Type for {selected_country} (1980-2019)", fontsize=14)
-    ax.set_xlabel("Year", fontsize=12)
-    ax.set_ylabel("Energy Consumption", fontsize=12)
-    ax.legend(title="Energy Types", bbox_to_anchor=(1.05, 1), loc='upper left')  # Place legend outside the graph
-    ax.grid(True, linestyle='--', linewidth=0.5)
+#     ax.set_title(f"Energy Consumption by Type for {selected_country} (1980-2019)", fontsize=14)
+#     ax.set_xlabel("Year", fontsize=12)
+#     ax.set_ylabel("Energy Consumption", fontsize=12)
+#     ax.legend(title="Energy Types", bbox_to_anchor=(1.05, 1), loc='upper left')  # Place legend outside the graph
+#     ax.grid(True, linestyle='--', linewidth=0.5)
 
-    st.pyplot(fig)
+#     st.pyplot(fig)
 
-else:
-    st.write(f"No historical data available for {selected_country} from 1980 to 2019.")
+# else:
+#     st.write(f"No historical data available for {selected_country} from 1980 to 2019.")
 
 # Add prediction section
 st.header("Energy and CO2 Emission Forecasts")
@@ -242,71 +266,195 @@ if selected_metric == "Normalized Comparison (Energy & CO2)":
     combined_forecast['Energy_norm'] = combined_forecast['Energy_consumption'] / combined_forecast['Energy_consumption'].max()
     combined_forecast['CO2_norm'] = combined_forecast['CO2_emission'] / combined_forecast['CO2_emission'].max()
 
-    # Plot the normalized graph
+    # Ensure 'Year' is numeric and properly formatted
+    combined_forecast['Year'] = combined_forecast['Year'].round().astype(int)
+
+    # Prepare the data in long format for Altair
+    chart_data = combined_forecast.melt(
+        id_vars="Year",
+        value_vars=["Energy_norm", "CO2_norm"],
+        var_name="Metric",
+        value_name="Normalized Value"
+    )
+
+    # Map metrics to custom names
+    metric_mapping = {
+        "Energy_norm": "Energy Consumption (Normalized)",
+        "CO2_norm": "CO2 Emissions (Normalized)"
+    }
+    chart_data["Metric"] = chart_data["Metric"].map(metric_mapping)
+
+    # Define custom color scale
+    custom_colors = alt.Scale(
+        domain=["CO2 Emissions (Normalized)", "Energy Consumption (Normalized)"],
+        range=["red", "blue"]  # Red for CO2, Blue for Energy
+    )
+
+    # Get the min and max values from the data to avoid empty ranges
+    y_min = chart_data['Normalized Value'].min()
+    y_max = chart_data['Normalized Value'].max()
+
+    # Create the Altair chart
+    chart = (
+        alt.Chart(chart_data)
+        .mark_line(point=False)  # Add points for clarity
+        .encode(
+            x=alt.X("Year:O", title="Year", axis=alt.Axis(labelAngle=0)),  # Horizontal year labels
+            y=alt.Y("Normalized Value:Q", title="Normalized Value", 
+                    scale=alt.Scale(domain=[y_min, y_max]),),  # Show float values with 2 decimals
+            color=alt.Color("Metric:N", title="Metric", scale=custom_colors),  # Custom colors
+            tooltip=["Year", "Metric", "Normalized Value"]
+        )
+        .properties(width=800, height=400)
+        .configure_view(stroke=None)  # Remove borders to avoid extra space
+    ).interactive()
+
+    # Display the chart in Streamlit
     st.subheader(f"Normalized Energy Consumption and CO2 Emissions for {selected_country} (2020-2030)")
-    fig, ax = plt.subplots(figsize=(12, 6))
+    st.altair_chart(chart, use_container_width=True)
 
-    # Plot normalized Energy Consumption
-    ax.plot(
-        combined_forecast['Year'],
-        combined_forecast['Energy_norm'],
-        label='Energy Consumption (Normalized)',
-        color='blue',
-        linewidth=2,
-    )
+    # # Normalize values for better comparison
+    # combined_forecast['Energy_norm'] = combined_forecast['Energy_consumption'] / combined_forecast['Energy_consumption'].max()
+    # combined_forecast['CO2_norm'] = combined_forecast['CO2_emission'] / combined_forecast['CO2_emission'].max()
 
-    # Plot normalized CO2 Emissions
-    ax.plot(
-        combined_forecast['Year'],
-        combined_forecast['CO2_norm'],
-        label='CO2 Emissions (Normalized)',
-        color='red',
-        linewidth=2,
-    )
+    # # Plot the normalized graph
+    # st.subheader(f"Normalized Energy Consumption and CO2 Emissions for {selected_country} (2020-2030)")
+    # fig, ax = plt.subplots(figsize=(12, 6))
 
-    # Add titles, labels, and legend
-    ax.set_title(f"Energy Consumption and CO2 Emissions for {selected_country} (2020-2030)", fontsize=14)
-    ax.set_xlabel("Year", fontsize=12)
-    ax.set_ylabel("Normalized Values", fontsize=12)
-    ax.legend(fontsize=10, loc='upper left')
-    ax.grid(True)
+    # # Plot normalized Energy Consumption
+    # ax.plot(
+    #     combined_forecast['Year'],
+    #     combined_forecast['Energy_norm'],
+    #     label='Energy Consumption (Normalized)',
+    #     color='blue',
+    #     linewidth=2,
+    # )
 
-    # Render the plot in Streamlit
-    st.pyplot(fig)
+    # # Plot normalized CO2 Emissions
+    # ax.plot(
+    #     combined_forecast['Year'],
+    #     combined_forecast['CO2_norm'],
+    #     label='CO2 Emissions (Normalized)',
+    #     color='red',
+    #     linewidth=2,
+    # )
+
+    # # Add titles, labels, and legend
+    # ax.set_title(f"Energy Consumption and CO2 Emissions for {selected_country} (2020-2030)", fontsize=14)
+    # ax.set_xlabel("Year", fontsize=12)
+    # ax.set_ylabel("Normalized Values", fontsize=12)
+    # ax.legend(fontsize=10, loc='upper left')
+    # ax.grid(True)
+
+    # # Render the plot in Streamlit
+    # st.pyplot(fig)
 
 elif selected_metric == "Energy Consumption":
+    # Ensure 'Year' is numeric and properly formatted
+    energy_forecast['Year'] = energy_forecast['Year'].round().astype(int)
+
+    # Calculate dynamic y-axis domain based on actual energy consumption values
+    y_min = energy_forecast['Energy_consumption'].min()
+    y_max = energy_forecast['Energy_consumption'].max()
+
+    # Create the Altair chart
+    chart = (
+        alt.Chart(energy_forecast)
+        .mark_line(color='blue', size=2)  # Line chart with blue color and thicker line
+        .encode(
+            x=alt.X('Year:O', title='Year', axis=alt.Axis(labelAngle=0)),  # Horizontal labels for Year
+            y=alt.Y(
+                'Energy_consumption:Q',
+                title='Energy Consumption',
+                scale=alt.Scale(domain=[y_min, y_max]),  # Dynamic y-axis domain
+                  # Format y-axis with 2 decimal points
+            ),
+            tooltip=['Year', 'Energy_consumption']  # Enable tooltips for better interaction
+        )
+        .properties(
+            title=f"Energy Consumption Prediction for {selected_country} (2020-2030)",  # Chart title
+            width=800,  # Chart width
+            height=400  # Chart height
+        )
+        .configure_axis(
+            grid=True,  # Add gridlines for better readability
+            labelAngle=0  # Horizontal labels for Year
+        )
+        .configure_title(fontSize=14)  # Adjust title font size
+    ).interactive()
+
+    # Display the Altair chart in Streamlit
     st.subheader(f"Energy Consumption Prediction for {selected_country} (2020-2030)")
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(
-        energy_forecast['Year'],
-        energy_forecast['Energy_consumption'],
-        label='Energy Consumption',
-        color='blue',
-        linewidth=2,
-    )
-    ax.set_title(f"Energy Consumption Prediction for {selected_country} (2020-2030)", fontsize=14)
-    ax.set_xlabel("Year", fontsize=12)
-    ax.set_ylabel("Energy Consumption", fontsize=12)
-    ax.legend(fontsize=10, loc='upper left')
-    ax.grid(True)
-    st.pyplot(fig)
+    st.altair_chart(chart, use_container_width=True)
+
+    # st.subheader(f"Energy Consumption Prediction for {selected_country} (2020-2030)")
+    # fig, ax = plt.subplots(figsize=(12, 6))
+    # ax.plot(
+    #     energy_forecast['Year'],
+    #     energy_forecast['Energy_consumption'],
+    #     label='Energy Consumption',
+    #     color='blue',
+    #     linewidth=2,
+    # )
+    # ax.set_title(f"Energy Consumption Prediction for {selected_country} (2020-2030)", fontsize=14)
+    # ax.set_xlabel("Year", fontsize=12)
+    # ax.set_ylabel("Energy Consumption", fontsize=12)
+    # ax.legend(fontsize=10, loc='upper left')
+    # ax.grid(True)
+    # st.pyplot(fig)
 
 elif selected_metric == "CO2 Emission":
+    # Ensure 'Year' is numeric and properly formatted
+    co2_forecast['Year'] = co2_forecast['Year'].round().astype(int)
+
+    # Calculate dynamic y-axis domain based on actual CO2 emission values
+    y_min = co2_forecast['CO2_emission'].min()
+    y_max = co2_forecast['CO2_emission'].max()
+
+    # Create the Altair chart
+    chart = (
+        alt.Chart(co2_forecast)
+        .mark_line(color='red', size=2)  # Line chart with red color and thicker line
+        .encode(
+            x=alt.X('Year:O', title='Year', axis=alt.Axis(labelAngle=0)),  # Horizontal labels for Year
+            y=alt.Y(
+                'CO2_emission:Q',
+                title='CO2 Emission',
+                scale=alt.Scale(domain=[y_min, y_max]),  # Dynamic y-axis domain
+            ),
+            tooltip=['Year', 'CO2_emission']  # Enable tooltips for better interaction
+        )
+        .properties(
+            title=f"CO2 Emission Prediction for {selected_country} (2020-2030)",  # Chart title
+            width=800,  # Chart width
+            height=400  # Chart height
+        )
+        .configure_axis(
+            grid=True,  # Add gridlines for better readability
+            labelAngle=0  # Horizontal labels for Year
+        )
+        .configure_title(fontSize=14)  # Adjust title font size
+    ).interactive()
+
+    # Display the Altair chart in Streamlit
     st.subheader(f"CO2 Emission Prediction for {selected_country} (2020-2030)")
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(
-        co2_forecast['Year'],
-        co2_forecast['CO2_emission'],
-        label='CO2 Emissions',
-        color='red',
-        linewidth=2,
-    )
-    ax.set_title(f"CO2 Emission Prediction for {selected_country} (2020-2030)", fontsize=14)
-    ax.set_xlabel("Year", fontsize=12)
-    ax.set_ylabel("CO2 Emission", fontsize=12)
-    ax.legend(fontsize=10, loc='upper left')
-    ax.grid(True)
-    st.pyplot(fig)
+    st.altair_chart(chart, use_container_width=True)
+
+    # st.subheader(f"CO2 Emission Prediction for {selected_country} (2020-2030)")
+    # fig, ax = plt.subplots(figsize=(12, 6))
+    # ax.plot(
+    #     co2_forecast['Year'],
+    #     co2_forecast['CO2_emission'],
+    #     label='CO2 Emissions',
+    #     color='red',
+    #     linewidth=2,
+    # )
+    # ax.set_title(f"CO2 Emission Prediction for {selected_country} (2020-2030)", fontsize=14)
+    # ax.set_xlabel("Year", fontsize=12)
+    # ax.set_ylabel("CO2 Emission", fontsize=12)
+    # ax.legend(fontsize=10, loc='upper left')
+    # ax.grid(True)
+    # st.pyplot(fig)
 
 renewable_data = filter_renewables(data, selected_country)
 
@@ -321,8 +469,6 @@ else:
     rankings.to_csv(rankings_file, index=False)
 
 
-st.subheader("Top 5 Climate Heroes")
-
 df_sorted = rankings.sort_values(by='Climate_points', ascending=True)
 
 # Add a Climate_rank column based on the sorted order
@@ -331,7 +477,7 @@ df_sorted['Climate_rank'] = range(1, len(df_sorted) + 1)
 # Reset index if needed
 df_sorted.reset_index(drop=True, inplace=True)
 is_hero = is_climate_hero(df_sorted, selected_country)
-st.header("Climate Hero Rankings")
+st.subheader("Climate Hero Rankings")
 if is_hero:
         st.success(f"{selected_country} is on track to become a Climate Hero by 2030!")
         st.balloons()
@@ -339,3 +485,68 @@ else:
     st.warning(f"{selected_country} is not a Climate Hero by 2030.")
 
 st.table(df_sorted.head())
+
+
+if not country_data.empty:
+    
+    # Create a mapping dictionary for legend labels
+    energy_type_mapping = {
+        "all_energy_types": "All Energy Types",
+        "coal": "Coal",
+        "natural_gas": "Natural Gas",
+        "petroleum_n_other_liquids": "Petroleum & Other Liquids",
+        "renewables_n_other": "Renewables & Other"
+    }
+    # Ensure 'Year' is numeric and properly formatted
+    country_data['Year'] = country_data['Year'].round().astype(int)
+     # Map the 'Energy_type' column to the new labels
+    country_data['Energy_type'] = country_data['Energy_type'].map(energy_type_mapping)
+
+    # Create the Altair chart
+    chart = (
+        alt.Chart(country_data)
+        .mark_circle(size=100, opacity=0.7)  # Use circles for scatter plot
+        .encode(
+            x=alt.X('Year:O', title='Year', axis=alt.Axis(labelAngle=0)),  # Horizontal year labels
+            y=alt.Y('Energy_consumption:Q', title='Energy Consumption'),
+            color=alt.Color('Energy_type:N', title='Energy Types'),  # Color by Energy Type
+            tooltip=['Year', 'Energy_consumption', 'Energy_type']  # Add tooltips
+        )
+        .properties(
+            title=f"Energy Consumption by Type for {selected_country} (1980-2019)",
+            width=800,
+            height=400
+        )
+        .configure_axis(grid=True)  # Enable gridlines
+        .configure_legend(
+            titleFontSize=12,
+            labelFontSize=10,
+            orient='right'  # Place legend to the right
+        )
+        .configure_title(fontSize=14)  # Set title font size
+    ).interactive()
+
+    # Display the Altair chart in Streamlit
+    st.altair_chart(chart, use_container_width=True)
+
+    # fig, ax = plt.subplots(figsize=(12, 6))
+    # energy_types = country_data['Energy_type'].unique()
+    # colors = plt.cm.get_cmap('tab10', len(energy_types)).colors
+
+    # for idx, energy_type in enumerate(energy_types):
+    #     type_data = country_data[country_data['Energy_type'] == energy_type]
+    #     ax.scatter(type_data['Year'], type_data['Energy_consumption'], label=energy_type, color=colors[idx])
+
+    # ax.set_title(f"Energy Consumption by Type for {selected_country} (1980-2019)", fontsize=14)
+    # ax.set_xlabel("Year", fontsize=12)
+    # ax.set_ylabel("Energy Consumption", fontsize=12)
+    # ax.legend(title="Energy Types", bbox_to_anchor=(1.05, 1), loc='upper left')  # Place legend outside the graph
+    # ax.grid(True, linestyle='--', linewidth=0.5)
+
+    # st.pyplot(fig)
+
+    st.subheader(f"Historical Data for {selected_country} (1980-2019)")
+    st.dataframe(country_data)
+
+else:
+    st.write(f"No historical data available for {selected_country} from 1980 to 2019.")
