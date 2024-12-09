@@ -279,14 +279,14 @@ if selected_metric == "Normalized Comparison (Energy & CO2)":
 
     # Map metrics to custom names
     metric_mapping = {
-        "Energy_norm": "Energy Consumption",
+       "Energy_norm": "Energy Consumption",
         "CO2_norm": "CO2 Emissions"
     }
     chart_data["Metric"] = chart_data["Metric"].map(metric_mapping)
 
     # Define custom color scale
     custom_colors = alt.Scale(
-        domain=["CO2 Emissions (Normalized)", "Energy Consumption (Normalized)"],
+        domain=["CO2 Emissions", "Energy Consumption"],
         range=["red", "blue"]  # Red for CO2, Blue for Energy
     )
 
