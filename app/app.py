@@ -279,8 +279,8 @@ if selected_metric == "Normalized Comparison (Energy & CO2)":
 
     # Map metrics to custom names
     metric_mapping = {
-        "Energy_norm": "Energy Consumption (Normalized)",
-        "CO2_norm": "CO2 Emissions (Normalized)"
+        "Energy_norm": "Energy Consumption",
+        "CO2_norm": "CO2 Emissions"
     }
     chart_data["Metric"] = chart_data["Metric"].map(metric_mapping)
 
