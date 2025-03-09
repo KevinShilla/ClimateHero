@@ -4,7 +4,7 @@ Welcome to **Climate Hero**, your go-to tool for visualizing energy consumption 
 
 ---
 
-## 📖 **Table of Contents**
+##  **Table of Contents**
 - [Introduction](#introduction)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
@@ -16,7 +16,7 @@ Welcome to **Climate Hero**, your go-to tool for visualizing energy consumption 
 
 ---
 
-## ✨ **Introduction**
+##  **Introduction**
 
 **Climate Hero** is an interactive web app that leverages machine learning to provide accurate predictions of energy consumption and CO2 emissions for various countries. With visualizations that make complex data easy to understand, this tool fosters awareness about global energy trends and helps users explore solutions for a greener planet.
 
@@ -27,20 +27,20 @@ Welcome to **Climate Hero**, your go-to tool for visualizing energy consumption 
 
 ---
 
-## 🔑 **Features**
+##  **Features**
 
-- 🌍 **Dynamic Filtering**: Choose a country to analyze its energy and emission trends.
-- 📊 **Interactive Visualizations**:
+-  **Dynamic Filtering**: Choose a country to analyze its energy and emission trends.
+-  **Interactive Visualizations**:
   - Normalized graphs for energy consumption and CO2 emissions.
   - Individual prediction graphs for energy consumption and CO2 emissions.
-- 🧠 **Machine Learning Models**:
+-  **Machine Learning Models**:
   - **Prophet** for energy consumption predictions.
   - **Random Forest** for CO2 emissions forecasting.
-- 📈 **Historical Data**: Explore past trends with scatter plots and data tables.
+-  **Historical Data**: Explore past trends with scatter plots and data tables.
 
 ---
 
-## 🛠️ **Tech Stack**
+##  **Tech Stack**
 
 | **Technology**  | **Purpose**                                                   |
 |------------------|---------------------------------------------------------------|
@@ -54,7 +54,7 @@ Welcome to **Climate Hero**, your go-to tool for visualizing energy consumption 
 
 ---
 
-## 🔄 **How It Works**
+##  **How It Works**
 
 **Input**:
 - Upload or access preloaded energy consumption and CO2 emission datasets.
@@ -77,21 +77,21 @@ Welcome to **Climate Hero**, your go-to tool for visualizing energy consumption 
 
 ---
 
-## 🖼️ **Screenshots**
+##  **Screenshots**
 
-### 🌍 Homepage
+###  Homepage
 _**![image](https://github.com/user-attachments/assets/dfdb411f-a7bd-46ab-96f0-0ab13cf575ca)
 **_
 
-### 📊 Historical Data
+###  Historical Data
 _![image](https://github.com/user-attachments/assets/f060a252-4020-4ca5-ac26-3a951b3b8a21)
 _
 
-### 🔮 Energy Consumption by type Graph
+###  Energy Consumption by type Graph
 _![image](https://github.com/user-attachments/assets/7a9f3a65-c97e-40fd-adfa-7ffff3669e39)
 _
 
-### 📈 Energy and CO2 Predictions
+###  Energy and CO2 Predictions
 _![image](https://github.com/user-attachments/assets/1b6e681b-329d-4705-a0cf-718091dcca34)
 _
 
@@ -100,7 +100,7 @@ _
 
 ---
 
-## ⚙️ **Setup**
+##  **Setup**
 
 Follow these steps to set up and run **Climate Hero**:
 
@@ -126,7 +126,7 @@ Open the local URL provided in the terminal (e.g., http://localhost:8501) to exp
 **OR**
 Go to: https://climatehero.streamlit.app/
 
-💡 How It Helps
+ How It Helps
 Climate Hero is designed to serve a wide audience:
 
 Policy Makers: Use predictions to implement data-driven sustainability initiatives.
