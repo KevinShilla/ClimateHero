@@ -79,6 +79,9 @@ Welcome to **Climate Hero**, your go-to tool for visualizing energy consumption 
 
 ##  **Screenshots**
 
+### WorkFlow
+![image](https://github.com/user-attachments/assets/7b37bab1-615f-43ec-aec2-f3a8c39278dd)
+
 ###  Homepage
 _**![image](https://github.com/user-attachments/assets/dfdb411f-a7bd-46ab-96f0-0ab13cf575ca)
 **_
